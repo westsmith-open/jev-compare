@@ -4,6 +4,8 @@ Send the same labelled item to a decision model ([Jev](https://docs.typesafe.ai/
 
 > Unofficial. Not affiliated with or endorsed by TypeSafe AI or Google.
 
+![The one-call page: the same phishing report as a Jev request (left) and a Gemini request (right)](docs/screenshot.png)
+
 ## Why
 
 Decision models such as Jev answer typed questions (yes/no, pick one, ordered scale) and return a probability for every allowed answer in one fast pass. The usual alternative is a general LLM with a prompt and a JSON schema. This project puts the two side by side on the same items, so you can see:
