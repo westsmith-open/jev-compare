@@ -415,7 +415,11 @@ class SimulatedProvider(Provider):
         r = Result(model=self.id, item_id=item["id"], simulated=True, latency_ms=latency)
         for q in task["questions"]:
             opts = options(q)
-            truth = str(item["labels"][q["id"]]).lower() if q["type"] == "noul" else item["labels"][q["id"]]
+            labels = item.get("labels", {})
+            if q["id"] in labels:
+                truth = str(labels[q["id"]]).lower() if q["type"] == "noul" else labels[q["id"]]
+            else:  # no known answer: simulate around an arbitrary but stable option
+                truth = rng.choice(opts)
             if p["calibrated"]:
                 conf = min(0.995, max(1 / len(opts) + 0.05, rng.betavariate(9, 1.1)))
                 correct = rng.random() < conf

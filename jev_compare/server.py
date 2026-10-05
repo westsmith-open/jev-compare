@@ -53,6 +53,13 @@ def norm_label(q: dict, v) -> str:
     return str(v)
 
 
+def grade(result: dict, qid: str, labels: dict) -> bool | None:
+    """True or False against the known answer; None when the item has no known answer for this question."""
+    if qid not in labels:
+        return None
+    return result["answers"].get(qid, {}).get("answer") == labels[qid]
+
+
 def preview(item: dict) -> str:
     s = item["state"]
     if isinstance(s, dict):
@@ -105,7 +112,7 @@ async def single_call(req: CallRequest):
     if item is None:
         raise HTTPException(404, "unknown item")
     qs = {q["id"]: q for q in task["questions"]}
-    labels = {k: norm_label(qs[k], v) for k, v in item["labels"].items()}
+    labels = {k: norm_label(qs[k], v) for k, v in item.get("labels", {}).items()}
     provs = load_providers(load_models())
     for p in provs.values():
         p.retries = False
@@ -114,7 +121,7 @@ async def single_call(req: CallRequest):
 
         async def one(pid):
             r = (await provs[pid].classify(client, task, item)).to_dict()
-            r["correct"] = {qid: r["answers"].get(qid, {}).get("answer") == labels[qid] for qid in qs}
+            r["correct"] = {qid: grade(r, qid, labels) for qid in qs}
             return r
 
         results = await asyncio.gather(*(one(pid) for pid in provs))
@@ -192,7 +199,7 @@ async def run(req: RunRequest):
                     "id": it["id"],
                     "preview": preview(it),
                     "state": it["state"],
-                    "labels": {k: norm_label(qs[k], v) for k, v in it["labels"].items()},
+                    "labels": {k: norm_label(qs[k], v) for k, v in it.get("labels", {}).items()},
                 }
                 for it in items
             ],
@@ -219,10 +226,8 @@ async def run(req: RunRequest):
                             "simulated": False,
                             "raw": None,
                         }
-                    r["correct"] = {
-                        qid: (r["answers"].get(qid, {}).get("answer") == norm_label(q, item["labels"][qid]))
-                        for qid, q in qs.items()
-                    }
+                    labels = {k: norm_label(qs[k], v) for k, v in item.get("labels", {}).items()}
+                    r["correct"] = {qid: grade(r, qid, labels) for qid in qs}
                     r["finished_at"] = time.time()
                     await queue.put(r)
 

@@ -358,15 +358,20 @@ function stats(mid) {
   const rs = Object.values(run.results[mid] || {});
   const ok = rs.filter((r) => r.ok);
   const lat = ok.map((r) => r.latency_ms);
-  const full = ok.filter((r) => Object.values(r.correct).every(Boolean)).length;
-  const perQ = t.questions.map((q) => ({ id: q.id, acc: ok.length ? ok.filter((r) => r.correct[q.id]).length / ok.length : NaN }));
+  // Accuracy only counts answers that have a known answer to compare with (correct is null otherwise).
+  const graded = ok.filter((r) => Object.values(r.correct).every((v) => v !== null));
+  const full = graded.filter((r) => Object.values(r.correct).every(Boolean)).length;
+  const perQ = t.questions.map((q) => {
+    const g = ok.filter((r) => r.correct[q.id] !== null);
+    return { id: q.id, acc: g.length ? g.filter((r) => r.correct[q.id]).length / g.length : NaN };
+  });
   const cost = ok.reduce((a, r) => a + r.cost_usd, 0);
   const tin = ok.reduce((a, r) => a + r.input_tokens, 0);
   const tout = ok.reduce((a, r) => a + r.output_tokens, 0);
   const meanCost = ok.length ? cost / ok.length : NaN;
   const errors = rs.filter((r) => !r.ok);
   return {
-    n: ok.length, errors, acc: ok.length ? full / ok.length : NaN, perQ, lat,
+    n: ok.length, errors, acc: graded.length ? full / graded.length : NaN, perQ, lat,
     p50: quant(lat, 0.5), p95: quant(lat, 0.95), meanCost,
     per1m: meanCost * 1e6, annual: meanCost * t.volume,
     tin: ok.length ? tin / ok.length : NaN, tout: ok.length ? tout / ok.length : NaN,
@@ -376,8 +381,9 @@ const minConf = (r) => Math.min(...Object.values(r.answers).map((a) => a.confide
 function coverage(mid, thr) {
   const ok = Object.values(run.results[mid] || {}).filter((r) => r.ok);
   const auto = ok.filter((r) => minConf(r) >= thr);
-  const right = auto.filter((r) => Object.values(r.correct).every(Boolean)).length;
-  return { share: ok.length ? auto.length / ok.length : NaN, acc: auto.length ? right / auto.length : NaN, n: auto.length };
+  const graded = auto.filter((r) => Object.values(r.correct).every((v) => v !== null));
+  const right = graded.filter((r) => Object.values(r.correct).every(Boolean)).length;
+  return { share: ok.length ? auto.length / ok.length : NaN, acc: graded.length ? right / graded.length : NaN, n: graded.length };
 }
 
 // ---------- render
@@ -472,7 +478,7 @@ function renderCoverage() {
   $("#readout").innerHTML = run.models.map((m) => {
     const c = coverage(m.id, thr);
     return `<div><i class="swatch" style="background:${col(modelIdx(m.id))}"></i><b>${esc(modelCfg(m.id).label)}</b>
-      <span>${pct(c.share)} routed automatically</span><span class="muted">·</span><span>${isNaN(c.acc) ? "nothing routed" : pct(c.acc) + " of those fully right"}</span></div>`;
+      <span>${pct(c.share)} routed automatically</span><span class="muted">·</span><span>${!isNaN(c.acc) ? pct(c.acc) + " of those fully right" : c.share > 0 ? "accuracy needs known answers" : "nothing routed"}</span></div>`;
   }).join("");
   const W = 520, H = 250, L = 40, R = 14, T = 10, B = 30;
   const x = (v) => L + v * (W - L - R);
@@ -482,7 +488,11 @@ function renderCoverage() {
     return { m, pts };
   });
   const accs = series.flatMap((s) => s.pts.map((p) => p.acc));
-  if (!accs.length) { $("#covChart").innerHTML = `<div class="empty">Waiting for the first results</div>`; return; }
+  if (!accs.length) {
+    const msg = run.done ? "This chart needs items with known answers" : "Waiting for the first results";
+    $("#covChart").innerHTML = `<div class="empty">${msg}</div>`;
+    return;
+  }
   const yLo = Math.max(0, Math.floor(Math.min(...accs) * 10) / 10 - 0.05);
   const y = (v) => T + (1 - (v - yLo) / (1 - yLo)) * (H - T - B);
   let g = "";
@@ -509,8 +519,9 @@ function renderLedger() {
       const r = run.results[m.id][it.id];
       if (!r) return `<td><span class="pill pending">…</span></td>`;
       if (!r.ok) return `<td><span class="pill no">error</span></td>`;
-      const right = Object.values(r.correct).filter(Boolean).length, n = t.questions.length;
-      return `<td><span class="score"><span class="pill ${right === n ? "ok" : "no"}">${right}/${n}</span><span class="muted">${ms(r.latency_ms)}</span><span class="muted">min conf ${minConf(r).toFixed(2)}</span></span></td>`;
+      const g = Object.values(r.correct).filter((v) => v !== null), right = g.filter(Boolean).length, n = g.length;
+      const pill = n ? `<span class="pill ${right === n ? "ok" : "no"}">${right}/${n}</span>` : `<span class="pill pending">no known answers</span>`;
+      return `<td><span class="score">${pill}<span class="muted">${ms(r.latency_ms)}</span><span class="muted">min conf ${minConf(r).toFixed(2)}</span></span></td>`;
     }).join("");
     const main = `<tr class="item" data-id="${esc(it.id)}" tabindex="0"><td class="mono">${esc(it.id)}</td><td class="prev">${esc(it.preview)}</td>${cells}</tr>`;
     return main + (openRow === it.id ? `<tr class="detail"><td colspan="${2 + run.models.length}">${audit(it)}</td></tr>` : "");
@@ -534,9 +545,9 @@ function audit(it) {
       const dist = a.probs ? `<div class="dist">${Object.entries(a.probs).map(([k, p]) => `<div><span>${esc(k)}</span><span class="bar"><i style="width:${p * 100}%;background:${col(modelIdx(m.id))}"></i></span><span>${p.toFixed(2)}</span></div>`).join("")}</div>`
         : `<div class="muted" style="font-size:11px">Self-reported confidence; no distribution</div>`;
       return `<div class="ans"><div class="line"><span><i class="swatch" style="display:inline-block;background:${col(modelIdx(m.id))}"></i> <span class="mono">${esc(a.answer)}</span></span>
-        <span><span class="pill ${right ? "ok" : "no"}">${right ? "right" : "wrong"}</span> <span class="mono muted">${(a.confidence ?? 0).toFixed(2)}${(a.confidence ?? 0) >= thr ? "" : " · to person"}</span></span></div>${dist}</div>`;
+        <span>${right === null ? "" : `<span class="pill ${right ? "ok" : "no"}">${right ? "right" : "wrong"}</span>`} <span class="mono muted">${(a.confidence ?? 0).toFixed(2)}${(a.confidence ?? 0) >= thr ? "" : " · to person"}</span></span></div>${dist}</div>`;
     }).join("");
-    return `<div class="qbox"><div><b class="mono" style="font-size:12px">${esc(q.id)}</b> <span class="truth">known answer: <span class="mono">${esc(it.labels[q.id])}</span></span></div>${per}</div>`;
+    return `<div class="qbox"><div><b class="mono" style="font-size:12px">${esc(q.id)}</b> <span class="truth">known answer: <span class="mono">${q.id in it.labels ? esc(it.labels[q.id]) : "none"}</span></span></div>${per}</div>`;
   }).join("");
   const raws = run.models.map((m) => {
     const r = run.results[m.id][it.id];

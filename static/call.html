@@ -43,6 +43,11 @@ h3 { margin: 8px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing
 .url b { color: var(--lit); }
 .err { color: #cf222e; white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; }
 .hint { color: var(--muted); margin: 0; }
+#agree p { margin: 0 0 6px; }
+table.agree { border-collapse: collapse; font-size: 13px; }
+table.agree th, table.agree td { text-align: left; padding: 3px 14px 3px 0; border-bottom: 1px solid var(--line); }
+table.agree th { color: var(--muted); font-weight: 600; }
+table.agree code { font-family: ui-monospace, Menlo, monospace; }
 
 /* Info boxes (twisties) */
 details.box { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
@@ -87,6 +92,7 @@ details.box > .body { padding: 4px 16px 12px; border-top: 1px solid var(--line);
     <button id="send">Send 1 request to each model</button>
   </div>
   <p id="input"></p>
+  <div id="agree"></div>
   <div class="cols" id="cols"></div>
 </main>
 
@@ -165,7 +171,11 @@ function column(id, req, res) {
   let html = `<h2>${esc(label(id))}</h2>`;
   if (res) {
     const m = CFG.models.find((x) => x.id === id);
-    const right = Object.values(res.correct).filter(Boolean).length;
+    const graded = Object.values(res.correct).filter((v) => v !== null);
+    const right = graded.filter(Boolean).length;
+    const correctRow = graded.length
+      ? `${right} of ${graded.length} <span>questions match the known answers</span>`
+      : `– <span>this item has no known answers</span>`;
     const reasoning = res.raw?.usage?.completion_tokens_details?.reasoning_tokens;
     const outNote = m.price_out === 0 ? "counted, not billed" : reasoning ? `billed, ${reasoning} of them reasoning` : "billed";
     html += `<dl class="stats">
@@ -173,7 +183,7 @@ function column(id, req, res) {
       <dt>Cost</dt><dd>${usd(res.cost_usd)}</dd>
       <dt>Input tokens</dt><dd>${res.input_tokens} <span>billed</span></dd>
       <dt>Output tokens</dt><dd>${res.output_tokens} <span>${outNote}</span></dd>
-      <dt>Correct answers</dt><dd>${right} of ${Object.keys(res.correct).length} <span>questions match the known answers</span></dd>
+      <dt>Correct answers</dt><dd>${correctRow}</dd>
     </dl>`;
   }
   const info = id === "jev" ? jevRef : geminiPromptBox(req.body);
@@ -186,7 +196,23 @@ function column(id, req, res) {
     + [html, info, request, response].map((b) => `<div>${b}</div>`).join("") + `</section>`;
 }
 
+// Where the two models give the same answer, and where they differ. Useful with or without known answers.
+function agreement(results) {
+  const [a, b] = results;
+  if (!a || !b || !a.ok || !b.ok) return "";
+  const qs = task().questions;
+  const same = qs.filter((q) => a.answers[q.id]?.answer === b.answers[q.id]?.answer);
+  const diff = qs.filter((q) => !same.includes(q));
+  const rows = qs.map((q) => {
+    const x = a.answers[q.id]?.answer, y = b.answers[q.id]?.answer;
+    return `<tr><td><code>${esc(q.id)}</code></td><td>${esc(x)}</td><td>${esc(y)}</td><td>${x === y ? "agree" : "<b>differ</b>"}</td></tr>`;
+  }).join("");
+  return `<p><b>The models agree on ${same.length} of ${qs.length} questions</b>${diff.length ? `; they differ on ${diff.map((q) => esc(q.id)).join(", ")}` : ""}.</p>
+    <table class="agree"><tr><th>Question</th><th>${esc(label(a.model))}</th><th>${esc(label(b.model))}</th><th></th></tr>${rows}</table>`;
+}
+
 async function preview() {
+  $("#agree").innerHTML = "";
   const it = task().items.find((i) => i.id === $("#item").value);
   $("#input").textContent = it.preview;
   const reqs = await (await fetch(`/api/preview?task_id=${task().id}&item_id=${it.id}`)).json();
@@ -201,8 +227,10 @@ async function send() {
       body: JSON.stringify({ task_id: task().id, item_id: $("#item").value }) });
     if (!resp.ok) throw new Error(await resp.text());
     const d = await resp.json();
+    $("#agree").innerHTML = agreement(d.results);
     $("#cols").innerHTML = d.results.map((r) => column(r.model, r.request, r)).join("");
   } catch (e) {
+    $("#agree").innerHTML = "";
     $("#cols").innerHTML = `<p class="err">${esc(e.message)}</p>`;
   } finally {
     $("#send").disabled = false;
