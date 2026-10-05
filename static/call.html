@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jev-compare</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --code-bg: #f6f8fa; --panel: #fbfcfd;
+  --key: #0550ae; --str: #116329; --num: #953800; --lit: #8250df; --punc: #6e7781;
+  --jev: #2a78d6; --gem: #eb6834; --btn: #1f2328; --btn-fg: #ffffff; --link: #0969da;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --code-bg: #161b22; --panel: #11161d;
+    --key: #79c0ff; --str: #7ee2a8; --num: #ffa657; --lit: #d2a8ff; --punc: #8b949e;
+    --jev: #3987e5; --gem: #d95926; --btn: #e6edf3; --btn-fg: #0d1117; --link: #58a6ff;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--link); }
+main { padding: 16px 20px 48px; display: grid; gap: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+select, button { font: inherit; color: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+#item { max-width: 640px; }
+#send { background: var(--btn); color: var(--btn-fg); border-color: var(--btn); font-weight: 600; padding: 6px 16px; cursor: pointer; }
+#send:disabled { opacity: .5; }
+#input { color: var(--muted); max-width: 120ch; margin: 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.cols > section { min-width: 0; display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 12px; border-top: 4px solid var(--c); padding-top: 8px; }
+.cols > section > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+h2 { margin: 0; font-size: 18px; }
+h3 { margin: 8px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.stats { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 0; }
+.stats dt { color: var(--muted); }
+.stats dd { margin: 0; font: 600 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+.stats dd span { color: var(--muted); font: 400 13px system-ui, sans-serif; margin-left: 6px; }
+.url { font: 13px ui-monospace, "SF Mono", Menlo, monospace; word-break: break-all; }
+.url b { color: var(--lit); }
+.err { color: #cf222e; white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; }
+.hint { color: var(--muted); margin: 0; }
+
+/* Info boxes (twisties) */
+details.box { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+details.box > summary { cursor: pointer; padding: 8px 12px; font-weight: 600; }
+details.box > .body { padding: 4px 16px 12px; border-top: 1px solid var(--line); }
+.ref dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 8px 0 0; }
+.ref dt { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+.ref dd { margin: 0; }
+
+/* Rendered markdown */
+.md { max-width: 90ch; }
+.md h2 { font-size: 16px; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.md h3 { font-size: 14px; margin: 12px 0 4px; text-transform: none; letter-spacing: 0; color: var(--fg); }
+.md p { margin: 6px 0; }
+.md ul { margin: 4px 0; padding-left: 22px; }
+.md code { font: 12.5px ui-monospace, Menlo, monospace; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+.md pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; white-space: pre-wrap; }
+.md pre code { background: none; padding: 0; }
+
+/* Collapsible JSON */
+.json-tools { display: flex; gap: 6px; justify-content: flex-end; }
+.json-tools button { font-size: 12px; padding: 2px 8px; cursor: pointer; }
+.json { margin: 0; padding: 12px 12px 12px 26px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px;
+        font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, monospace; white-space: pre-wrap; word-break: break-word; overflow: auto; max-height: 75vh; }
+.json details > summary { list-style: none; cursor: pointer; }
+.json details > summary::-webkit-details-marker { display: none; }
+.json details > summary::before { content: "▾"; color: var(--punc); display: inline-block; width: 14px; margin-left: -14px; }
+.json details:not([open]) > summary::before { content: "▸"; }
+.json details > summary:hover { background: color-mix(in srgb, var(--key) 8%, transparent); }
+.json .kids { padding-left: 2ch; border-left: 1px dotted var(--line); margin-left: 2px; }
+.json .fold { display: none; color: var(--punc); }
+.json details:not([open]) > summary .fold { display: inline; }
+.k { color: var(--key); } .s { color: var(--str); } .n { color: var(--num); } .l { color: var(--lit); } .p { color: var(--punc); }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <select id="task" aria-label="Task"></select>
+    <select id="item" aria-label="Item"></select>
+    <button id="send">Send 1 request to each model</button>
+  </div>
+  <p id="input"></p>
+  <div class="cols" id="cols"></div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const COLOR = { jev: "var(--jev)", "gemini-flash": "var(--gem)" };
+const DOCS = "https://docs.typesafe.ai";
+let CFG;
+
+// ---------- collapsible, highlighted JSON
+function prim(v) {
+  if (typeof v === "string") return `<span class="s">${esc(JSON.stringify(v)).replace(/\\n/g, "\\n\n")}</span>`;
+  if (typeof v === "number") return `<span class="n">${v}</span>`;
+  return `<span class="l">${v}</span>`;
+}
+function tree(val, key, last) {
+  const k = key != null ? `<span class="k">${esc(JSON.stringify(key))}</span><span class="p">: </span>` : "";
+  const comma = last ? "" : `<span class="p">,</span>`;
+  if (val && typeof val === "object") {
+    const arr = Array.isArray(val);
+    const entries = arr ? val.map((v, i) => [null, v]) : Object.entries(val);
+    const [o, c] = arr ? ["[", "]"] : ["{", "}"];
+    if (!entries.length) return `<div>${k}<span class="p">${o}${c}</span>${comma}</div>`;
+    const kids = entries.map(([kk, v], i) => tree(v, kk, i === entries.length - 1)).join("");
+    const n = `${entries.length} ${arr ? (entries.length === 1 ? "item" : "items") : (entries.length === 1 ? "key" : "keys")}`;
+    return `<details open><summary>${k}<span class="p">${o}</span><span class="fold"> … ${n} ${c}${comma}</span></summary>`
+      + `<div class="kids">${kids}</div><div><span class="p">${c}</span>${comma}</div></details>`;
+  }
+  return `<div>${k}${prim(val)}${comma}</div>`;
+}
+function jsonView(obj) {
+  return `<div class="json-tools"><button data-act="top">Collapse to top level</button><button data-act="all">Expand all</button></div>`
+    + `<div class="json">${tree(obj, null, true)}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const act = e.target.dataset?.act;
+  if (!act) return;
+  const box = e.target.parentElement.nextElementSibling;
+  box.querySelectorAll("details").forEach((d) => (d.open = act === "all"));
+  if (act === "top") box.querySelector("details").open = true;
+});
+
+// ---------- the explanatory boxes
+const jevRef = `<details class="box ref"><summary>What the Jev request fields mean (TypeSafe docs)</summary><div class="body">
+  <p>Jev is a <a href="${DOCS}/concepts/system-one" target="_blank">System One model</a>: one state, any number of typed questions, each answered independently in a single pass. It returns typed answers with probabilities, not text.</p>
+  <dl>
+    <dt>state</dt><dd>The content being judged, here the letter as data. <a href="${DOCS}/concepts/state" target="_blank">State</a></dd>
+    <dt>questions</dt><dd>A map of question id to a typed question. <a href="${DOCS}/primitives" target="_blank">Primitives (questions)</a></dd>
+    <dt>instructions</dt><dd>What the question asks about the state. <a href="${DOCS}/primitives" target="_blank">Primitives</a></dd>
+    <dt>criteria</dt><dd>The allowed answers: a map of options for choice, an ordered list of levels for score, an optional description of true and false for noul. <a href="${DOCS}/primitives" target="_blank">Primitives</a></dd>
+    <dt>type: "noul"</dt><dd>Probability that a statement is true, 0 to 1. <a href="${DOCS}/primitives/noul" target="_blank">Noul</a></dd>
+    <dt>type: "choice"</dt><dd>Pick one option from a fixed list; returns probabilities for every option. <a href="${DOCS}/primitives/choice" target="_blank">Choice</a></dd>
+    <dt>type: "score"</dt><dd>Place the state on ordered levels; returns a score, a legend and probabilities per level. <a href="${DOCS}/primitives/score" target="_blank">Score</a></dd>
+    <dt>confidence</dt><dd>In the response, derived from the probabilities. <a href="${DOCS}/confidence" target="_blank">Confidence</a></dd>
+    <dt>endpoint</dt><dd>Sent through OpenRouter's Decisions API. <a href="https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-questions-and-answers-request" target="_blank">API reference</a> · <a href="https://openrouter.ai/docs/guides/community/jev" target="_blank">Jev on OpenRouter</a></dd>
+  </dl></div></details>`;
+
+function geminiPromptBox(body) {
+  const msgs = body.messages || [];
+  const sys = msgs.find((m) => m.role === "system")?.content ?? "";
+  const user = msgs.find((m) => m.role === "user")?.content ?? "";
+  const html = window.marked ? marked.parse(user) : `<pre>${esc(user)}</pre>`;
+  return `<details class="box"><summary>Gemini prompt, rendered as markdown</summary><div class="body md">
+    <p><b>System:</b> ${esc(sys)}</p>${html}</div></details>`;
+}
+
+// ---------- page
+const ms = (x) => (x >= 1000 ? (x / 1000).toFixed(2) + " s" : Math.round(x) + " ms");
+const usd = (x) => "$" + (x < 0.01 ? x.toFixed(6) : x.toFixed(4));
+const task = () => CFG.tasks.find((t) => t.id === $("#task").value);
+const label = (id) => CFG.models.find((m) => m.id === id).label;
+
+function column(id, req, res) {
+  // Four blocks per model (header, info box, request, response); the grid lines them up across columns.
+  let html = `<h2>${esc(label(id))}</h2>`;
+  if (res) {
+    const m = CFG.models.find((x) => x.id === id);
+    const right = Object.values(res.correct).filter(Boolean).length;
+    const reasoning = res.raw?.usage?.completion_tokens_details?.reasoning_tokens;
+    const outNote = m.price_out === 0 ? "counted, not billed" : reasoning ? `billed, ${reasoning} of them reasoning` : "billed";
+    html += `<dl class="stats">
+      <dt>Time</dt><dd>${ms(res.latency_ms)}</dd>
+      <dt>Cost</dt><dd>${usd(res.cost_usd)}</dd>
+      <dt>Input tokens</dt><dd>${res.input_tokens} <span>billed</span></dd>
+      <dt>Output tokens</dt><dd>${res.output_tokens} <span>${outNote}</span></dd>
+      <dt>Correct answers</dt><dd>${right} of ${Object.keys(res.correct).length} <span>questions match the known answers</span></dd>
+    </dl>`;
+  }
+  const info = id === "jev" ? jevRef : geminiPromptBox(req.body);
+  const request = `<h3>Request</h3><div class="url"><b>POST</b> ${esc(req.url)}</div>${jsonView(req.body)}`;
+  let response = `<h3>Response</h3>`;
+  if (!res) response += `<p class="hint">Not sent yet.</p>`;
+  else if (!res.raw) response += `<p class="err">${esc(res.error)}</p>`;
+  else response += jsonView(res.raw);
+  return `<section style="--c:${COLOR[id] || "var(--line)"}">`
+    + [html, info, request, response].map((b) => `<div>${b}</div>`).join("") + `</section>`;
+}
+
+async function preview() {
+  const it = task().items.find((i) => i.id === $("#item").value);
+  $("#input").textContent = it.preview;
+  const reqs = await (await fetch(`/api/preview?task_id=${task().id}&item_id=${it.id}`)).json();
+  $("#cols").innerHTML = reqs.map((r) => column(r.model, r, null)).join("");
+}
+
+async function send() {
+  $("#send").disabled = true;
+  $("#send").textContent = "Waiting…";
+  try {
+    const resp = await fetch("/api/call", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task_id: task().id, item_id: $("#item").value }) });
+    if (!resp.ok) throw new Error(await resp.text());
+    const d = await resp.json();
+    $("#cols").innerHTML = d.results.map((r) => column(r.model, r.request, r)).join("");
+  } catch (e) {
+    $("#cols").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  } finally {
+    $("#send").disabled = false;
+    $("#send").textContent = "Send 1 request to each model";
+  }
+}
+
+function fillItems() {
+  $("#item").innerHTML = task().items.map((i) => `<option value="${i.id}">${esc(i.id)}: ${esc(i.preview.slice(0, 80))}</option>`).join("");
+  preview();
+}
+
+(async () => {
+  CFG = await (await fetch("/api/config")).json();
+  $("#task").innerHTML = CFG.tasks.map((t) => `<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  $("#task").onchange = fillItems;
+  $("#item").onchange = preview;
+  $("#send").onclick = send;
+  fillItems();
+})().catch((e) => ($("#cols").innerHTML = `<p class="err">Could not load: ${esc(e.message)}</p>`));
+</script>
+</body>
+</html>

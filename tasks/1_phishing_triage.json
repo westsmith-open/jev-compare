@@ -1,0 +1,89 @@
+{
+  "id": "phishing_triage",
+  "title": "Phishing report triage",
+  "annual_volume": 50000,
+  "description": "Triage emails that staff at Larkfield Analytics (a fictional company, domain larkfield.example) reported with the 'Report phishing' button. Decide whether each is phishing, what kind of lure it uses, and how much harm acting on it could cause. All emails, people and domains are fictional.",
+  "questions": [
+    {
+      "id": "is_phishing",
+      "type": "noul",
+      "instructions": "This email is a phishing or fraud attempt rather than a genuine message.",
+      "criteria": {
+        "true": "Tries to trick the recipient into giving credentials or money, opening malware, or acting on a false request, typically from a lookalike or unexpected sender.",
+        "false": "A genuine message from the sender it claims to be, even if it is urgent, unwanted marketing or about security."
+      }
+    },
+    {
+      "id": "lure",
+      "type": "choice",
+      "instructions": "What does the email try to get the recipient to do?",
+      "criteria": {
+        "credential_harvest": "Enter a password, login or card details on a page it links to or attaches.",
+        "invoice_fraud": "Pay an invoice or change a supplier's bank details so money goes to the attacker.",
+        "malware_attachment": "Open an attachment that runs code, such as a zip, macro-enabled document or executable.",
+        "gift_card": "Buy gift cards or vouchers and send the codes.",
+        "none": "Not a phishing email."
+      }
+    },
+    {
+      "id": "risk",
+      "type": "score",
+      "instructions": "How much harm could the company suffer if the recipient did what the email asks?",
+      "levels": [
+        {"key": "low", "text": "Low: no realistic harm; genuine email or harmless spam."},
+        {"key": "medium", "text": "Medium: limited loss, such as a small payment or one person's personal card details."},
+        {"key": "high", "text": "High: company credentials, company money, or malware on a company machine."}
+      ]
+    }
+  ],
+  "items": [
+    {"id": "ph-01", "state": {"from": "it-service@larkfield.example", "subject": "Planned maintenance Saturday 08:00-10:00", "body": "The expenses system will be unavailable on Saturday morning while we apply updates. No action needed. Status page: https://status.larkfield.example"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-02", "state": {"from": "support@larkfie1d-mail.example", "subject": "Your mailbox is 98% full", "body": "Your mailbox will stop receiving email in 24 hours. Sign in to increase your storage: https://larkfie1d-mail.example/upgrade"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "high"}},
+    {"id": "ph-03", "state": {"from": "priya.shah.ceo@freemail.example", "subject": "Quick favour", "body": "Are you at your desk? I need you to buy 5 x £100 vouchers for a client thank-you. Scratch the codes and send me photos. I'm in meetings so can't talk. Priya"},
+     "labels": {"is_phishing": true, "lure": "gift_card", "risk": "high"}},
+    {"id": "ph-04", "state": {"from": "accounts@northgate-supp1ies.example", "subject": "Updated bank details", "body": "Please note our bank details have changed. Update your records before Friday's payment run. New account: 40-11-62 / 81726354. Northgate Supplies Accounts"},
+     "labels": {"is_phishing": true, "lure": "invoice_fraud", "risk": "high"}},
+    {"id": "ph-05", "state": {"from": "accounts@northgate-supplies.example", "subject": "Invoice NS-20931", "body": "Please find attached invoice NS-20931 for September's stationery order, payable on our usual 30-day terms to the account on file. Thanks, Northgate Supplies", "attachments": ["NS-20931.pdf"]},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-06", "state": {"from": "billing@quick-invoices.example", "subject": "Overdue invoice", "body": "Your invoice is overdue. Open the attached file to see the amount.", "attachments": ["Invoice_88213.zip"]},
+     "labels": {"is_phishing": true, "lure": "malware_attachment", "risk": "high"}},
+    {"id": "ph-07", "state": {"from": "no-reply@notewell.example", "subject": "Reset your Notewell password", "body": "You asked to reset your Notewell password at 09:14 today. If this was you, use the link below within 30 minutes. If not, ignore this email. https://notewell.example/reset", "reporter_note": "I did request this, reported by mistake"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-08", "state": {"from": "security@cloudbox-alerts.example", "subject": "Unusual sign-in to your Cloudbox account", "body": "We detected a sign-in from Lagos, Nigeria. If this wasn't you, verify your account now: https://cloudbox-verify.example/login"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "high"}},
+    {"id": "ph-09", "state": {"from": "hr@larkfield.example", "subject": "Benefits enrolment closes Friday", "body": "Reminder: you must choose your 2027 benefits by Friday or you will be enrolled in the default plan. Make your choices at https://hr.larkfield.example/benefits"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-10", "state": {"from": "no-reply@signfIow.example", "subject": "Contract ready for your signature", "body": "Larkfield Analytics has sent you a document to review and sign. Sign in with your work account to view it: https://signfIow.example/doc/77341"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "high"}},
+    {"id": "ph-11", "state": {"from": "tracking@swiftpost.example", "subject": "Your parcel is on its way", "body": "Your order from Desk Direct will arrive tomorrow between 10:00 and 14:00. Track it at https://swiftpost.example/track/SP99210", "reporter_note": "I ordered a monitor arm last week"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-12", "state": {"from": "redelivery@swiftpost-redelivery.example", "subject": "We missed you", "body": "We tried to deliver your parcel. Pay a £1.99 redelivery fee within 48 hours: https://swiftpost-redelivery.example/pay"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "medium"}},
+    {"id": "ph-13", "state": {"from": "j.morley@larkfie1d.example", "subject": "Q3 salaries - confidential", "body": "Hi, as discussed, the updated salary bands are attached. You'll need to enable editing and macros to see the figures.", "attachments": ["Q3_salaries.xlsm"]},
+     "labels": {"is_phishing": true, "lure": "malware_attachment", "risk": "high"}},
+    {"id": "ph-14", "state": {"from": "news@dataconf.example", "subject": "Early-bird tickets for DataConf 2027", "body": "Save 30% on DataConf 2027 tickets until 31 October. Book at https://dataconf.example/tickets. Unsubscribe: https://dataconf.example/unsubscribe"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-15", "state": {"from": "finance.director@larkfield.example", "reply_to": "fd.larkfield@freemail.example", "subject": "Urgent payment today", "body": "Please pay the attached invoice for £18,400 to our new consultancy supplier today, it's time-critical for the acquisition. Keep this confidential for now. Reply to me directly once done."},
+     "labels": {"is_phishing": true, "lure": "invoice_fraud", "risk": "high"}},
+    {"id": "ph-16", "state": {"from": "sam.okafor@larkfield.example", "subject": "Roadmap doc for Thursday", "body": "Hi, here's the draft roadmap we talked about: https://drive.larkfield.example/d/roadmap-q1. Comments welcome before Thursday. Sam"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-17", "state": {"from": "people-team@larkfield-hr.example", "subject": "Action required: acknowledge the new staff handbook", "body": "All staff must acknowledge the updated handbook by end of day. Sign in with your Larkfield account: https://larkfield-hr.example/handbook"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "high"}},
+    {"id": "ph-18", "state": {"from": "it-security@larkfield.example", "subject": "We blocked a sign-in to your account", "body": "We blocked a sign-in attempt to your account from an unrecognised device. Your password has not been changed. If you think someone knows your password, call the IT desk on extension 4400. There are no links in this email."},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-19", "state": {"from": "rewards@prize-centre.example", "subject": "Congratulations! You've won a £500 voucher", "body": "You were selected in our monthly draw. Claim your voucher by entering your card details for a £2 verification charge: https://prize-centre.example/claim"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "medium"}},
+    {"id": "ph-20", "state": {"from": "voicemail@larkfield-phone.example", "subject": "New voicemail (0:42)", "body": "You have a new voicemail. Open the attachment to listen.", "attachments": ["voicemail_0042.html"], "attachment_note": "The HTML file opens a page asking for your Larkfield password"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "high"}},
+    {"id": "ph-21", "state": {"from": "aisha.rahman@larkfield.example", "subject": "Invitation: Sprint review, Thu 14:00", "body": "Calendar invitation from Aisha Rahman. Sprint review, Thursday 14:00-15:00, Room 3B. Accept or decline in your calendar."},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-22", "state": {"from": "refunds@revenue-office-uk.example", "subject": "You are owed a tax refund of £412.60", "body": "Our records show you overpaid tax. To receive your refund, submit your bank card details within 3 days: https://revenue-office-uk.example/refund"},
+     "labels": {"is_phishing": true, "lure": "credential_harvest", "risk": "medium"}},
+    {"id": "ph-23", "state": {"from": "accounts@northgate-supplies.example", "subject": "We're moving", "body": "From 1 November our office address will be Unit 4, Canal Wharf, Leeds. Our phone numbers, email addresses and bank details are not changing. Northgate Supplies"},
+     "labels": {"is_phishing": false, "lure": "none", "risk": "low"}},
+    {"id": "ph-24", "state": {"from": "accounts@northgate-supplies.example", "reply_to": "northgate.payments@mailbox.example", "subject": "RE: PO 4471", "body": "Following up on PO 4471 below. Due to an audit our usual account is frozen, so please send this month's payment of £6,240 to our temporary account 20-45-77 / 33109822 and confirm by reply.", "thread_note": "Reply in an existing thread with the real supplier"},
+     "labels": {"is_phishing": true, "lure": "invoice_fraud", "risk": "high"}}
+  ]
+}

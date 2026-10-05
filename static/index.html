@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jev-compare: batch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control bar on top, then summary → charts → item ledger; one column, max 1180px. */
+:root {
+  --bg: #f5f6f7;
+  --surface: #ffffff;
+  --ink: #15191d;
+  --ink-2: #4b535b;
+  --ink-3: #7a838c;
+  --line: #e1e4e8;
+  --line-2: #eef0f2;
+  --accent: #15191d;
+  --accent-ink: #ffffff;
+  --s1: #2a78d6;          /* series 1: decision model */
+  --s2: #eb6834;          /* series 2: LLM */
+  --s3: #1baf7a;
+  --good: #0f7b45; --good-bg: #e3f4ea;
+  --bad: #b42318;  --bad-bg: #fde8e6;
+  --warn: #8a5a00; --warn-bg: #fdf1d6;
+  --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #b4bcc3; --ink-3: #848d95;
+    --line: #2a3035; --line-2: #20252a; --accent: #eef1f3; --accent-ink: #111416;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --good: #5fd08f; --good-bg: #133222; --bad: #ff8a7a; --bad-bg: #3a1714; --warn: #f2c14e; --warn-bg: #3a2c0c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #b4bcc3; --ink-3: #848d95;
+  --line: #2a3035; --line-2: #20252a; --accent: #eef1f3; --accent-ink: #111416;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #5fd08f; --good-bg: #133222; --bad: #ff8a7a; --bad-bg: #3a1714; --warn: #f2c14e; --warn-bg: #3a2c0c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 64px; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+header p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+
+/* Controls */
+.controls { display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.seg button .uc { font-family: var(--mono); font-size: 12px; opacity: 0.7; margin-right: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); padding: 6px 10px; border-radius: 7px; cursor: pointer; user-select: none; }
+.chip input { margin: 0; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.02em; white-space: nowrap; }
+.badge.live { background: var(--good-bg); color: var(--good); }
+.badge.sim { background: var(--warn-bg); color: var(--warn); }
+select, input[type="number"] { border: 1px solid var(--line); background: var(--surface); padding: 6px 8px; border-radius: 7px; }
+.run { background: var(--accent); color: var(--accent-ink); border: 0; padding: 9px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.run:disabled { opacity: 0.5; cursor: progress; }
+.progress { height: 4px; background: var(--line-2); border-radius: 2px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--ink); transition: width .2s; }
+
+.task-desc { color: var(--ink-2); margin: 0; max-width: 85ch; }
+.qs { display: flex; flex-wrap: wrap; gap: 8px; }
+.q { border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; font-size: 13px; display: grid; gap: 2px; min-width: 0; }
+.q b { font-family: var(--mono); font-weight: 500; font-size: 12px; }
+.q .muted { font-size: 12px; }
+
+.banner { background: var(--warn-bg); color: var(--warn); padding: 10px 14px; border-radius: 8px; font-weight: 500; }
+.banner[hidden] { display: none; }
+.err { background: var(--bad-bg); color: var(--bad); padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+
+/* Summary */
+.headline { font-size: 20px; font-weight: 700; margin: 0; text-wrap: balance; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; border-top: 4px solid var(--c); }
+.card-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.card-head h3 { font-size: 17px; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 10px; }
+.metric { display: grid; gap: 2px; min-width: 0; }
+.metric .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+.metric .v { font-family: var(--mono); font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.metric .s { font-size: 12px; color: var(--ink-3); font-family: var(--mono); }
+.perq { display: grid; gap: 4px; font-size: 13px; }
+.perq div { display: grid; grid-template-columns: 1fr 52px 90px; gap: 8px; align-items: center; }
+.bar { height: 6px; background: var(--line-2); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+
+/* Charts */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.charts .panel { gap: 10px; }
+.chart-sub { margin: 0; color: var(--ink-3); font-size: 13px; }
+svg text { fill: var(--ink-3); font-family: var(--mono); font-size: 11px; }
+svg .grid { stroke: var(--line-2); }
+svg .axis { stroke: var(--line); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.slider-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.slider-row input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--ink); }
+.readout { display: grid; gap: 4px; font-size: 13px; }
+.readout div { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Ledger */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+tr.item { cursor: pointer; }
+tr.item:hover td { background: var(--line-2); }
+td.prev { max-width: 420px; color: var(--ink-2); }
+.score { display: inline-flex; gap: 6px; align-items: center; font-family: var(--mono); white-space: nowrap; }
+.pill { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radius: 5px; }
+.pill.ok { background: var(--good-bg); color: var(--good); }
+.pill.no { background: var(--bad-bg); color: var(--bad); }
+.pill.pending { background: var(--line-2); color: var(--ink-3); }
+tr.detail td { background: var(--bg); padding: 14px; }
+.audit { display: grid; gap: 14px; }
+.audit pre { margin: 0; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 260px; overflow: auto; }
+.qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.qbox { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
+.qbox .truth { font-size: 12px; color: var(--ink-3); }
+.ans { display: grid; gap: 4px; }
+.ans .line { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.dist { display: grid; gap: 2px; }
+.dist div { display: grid; grid-template-columns: 110px 1fr 42px; gap: 6px; align-items: center; font-size: 11px; font-family: var(--mono); color: var(--ink-3); }
+.dist .bar { height: 5px; }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.empty { color: var(--ink-3); padding: 28px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
+
+@media (max-width: 520px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .charts { grid-template-columns: 1fr; }
+  .perq div { grid-template-columns: 1fr 44px 60px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>jev-compare: batch</h1>
+    <p>Same labelled items, same questions, every model. Accuracy against known answers, wall-clock latency and billed cost per item.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Run settings">
+    <div class="field"><span>Task</span><div class="seg" id="tasks"></div></div>
+    <div class="row">
+      <div class="field"><span>Models</span><div class="row" id="models"></div></div>
+    </div>
+    <div class="row">
+      <label class="field"><span>Items</span>
+        <select id="n"><option value="1">1</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="999" selected>All</option></select>
+      </label>
+      <label class="field"><span>Parallel calls per model</span>
+        <input id="conc" type="number" min="1" max="32" value="6" style="width:80px">
+      </label>
+      <label class="chip" style="align-self:end"><input id="sim" type="checkbox"> Simulate all models</label>
+      <label class="field"><span>Past runs</span>
+        <select id="runs"><option value="">Load a saved run…</option></select>
+      </label>
+      <button class="run" id="go" style="align-self:end">Run comparison</button>
+    </div>
+    <div class="progress" aria-hidden="true"><div id="prog"></div></div>
+    <p class="task-desc" id="taskDesc"></p>
+    <div class="qs" id="qs"></div>
+  </section>
+
+  <div class="banner" id="simBanner" hidden></div>
+  <div class="err" id="err" hidden></div>
+
+  <section class="panel" id="summary" aria-label="Summary">
+    <h2>Results</h2>
+    <p class="headline" id="headline">Pick a task and run a comparison.</p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <div class="charts">
+    <section class="panel" aria-label="Latency">
+      <h2>Latency per item</h2>
+      <p class="chart-sub">Each dot is one call. Log scale. Line marks the median.</p>
+      <div class="legend" id="latLegend"></div>
+      <div id="latChart"></div>
+    </section>
+    <section class="panel" aria-label="Threshold">
+      <h2>Confidence threshold</h2>
+      <p class="chart-sub">An item routes automatically when every answer clears the threshold; the rest go to a person. A calibrated model trades share for accuracy smoothly.</p>
+      <div class="slider-row">
+        <label for="thr" class="muted">Threshold</label>
+        <input id="thr" type="range" min="0.5" max="0.99" step="0.01" value="0.9">
+        <span class="mono" id="thrv">0.90</span>
+      </div>
+      <div class="readout" id="readout"></div>
+      <div id="covChart"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Item ledger">
+    <h2>Item ledger</h2>
+    <p class="chart-sub">Select a row for the audit record: inputs, known answers, each model's answer, probabilities and the raw response.</p>
+    <div class="table-wrap"><table id="ledger"></table></div>
+  </section>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SERIES = ["--s1", "--s2", "--s3"];
+const col = (i) => `var(${SERIES[i % SERIES.length]})`;
+
+let CFG = null;
+let taskId = null;
+let run = null;            // {task_id, models:[{id,simulated}], items:[...], results:{model:{item:result}}}
+let openRow = null;
+let renderQueued = false;
+
+// ---------- formatting
+const pct = (x) => (x == null || isNaN(x) ? "–" : (x * 100).toFixed(0) + "%");
+const ms = (x) => (x == null || isNaN(x) ? "–" : x >= 1000 ? (x / 1000).toFixed(2) + " s" : Math.round(x) + " ms");
+function usd(x) {
+  if (x == null || isNaN(x)) return "–";
+  if (x === 0) return "$0";
+  if (x < 0.01) return "$" + x.toPrecision(2);
+  if (x < 1000) return "$" + x.toFixed(2);
+  return "$" + Math.round(x).toLocaleString("en-GB");
+}
+const quant = (arr, q) => { if (!arr.length) return NaN; const s = [...arr].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
+
+// ---------- setup
+async function init() {
+  CFG = await (await fetch("/api/config")).json();
+  const tb = $("#tasks");
+  CFG.tasks.forEach((t) => {
+    const b = document.createElement("button");
+    b.textContent = t.title;
+    b.onclick = () => selectTask(t.id);
+    b.dataset.id = t.id;
+    tb.appendChild(b);
+  });
+  const mb = $("#models");
+  CFG.models.forEach((m, i) => {
+    const l = document.createElement("label");
+    l.className = "chip";
+    l.innerHTML = `<input type="checkbox" id="m-${m.id}" value="${m.id}" checked>
+      <i class="swatch" style="background:${col(i)}"></i>${esc(m.label)}
+      <span class="muted mono" style="font-size:12px">${esc(m.model_name)}</span>
+      <span class="badge ${m.live ? "live" : "sim"}">${m.live ? "API key set" : "no key: simulated"}</span>`;
+    mb.appendChild(l);
+  });
+  $("#go").onclick = start;
+  $("#thr").oninput = () => { $("#thrv").textContent = (+$("#thr").value).toFixed(2); render(); };
+  $("#runs").onchange = (e) => e.target.value && loadRun(e.target.value);
+  selectTask(CFG.tasks[0].id);
+  refreshRuns();
+}
+
+function selectTask(id) {
+  taskId = id;
+  document.querySelectorAll("#tasks button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === id));
+  const t = task();
+  $("#taskDesc").textContent = t.description + ` Annual volume assumed: ${t.volume.toLocaleString("en-GB")} items.`;
+  $("#qs").innerHTML = t.questions.map((q) => `<div class="q"><b>${esc(q.id)} · ${q.type}</b><span>${esc(q.instructions)}</span><span class="muted">${q.options.map(esc).join(" · ")}</span></div>`).join("");
+  if (!run || run.task_id !== id) { run = null; render(); }
+}
+const task = (id = taskId) => CFG.tasks.find((t) => t.id === id);
+const modelCfg = (id) => CFG.models.find((m) => m.id === id);
+const modelIdx = (id) => CFG.models.findIndex((m) => m.id === id);
+
+async function refreshRuns() {
+  const list = await (await fetch("/api/runs")).json();
+  $("#runs").innerHTML = `<option value="">Load a saved run…</option>` + list.map((r) =>
+    `<option value="${esc(r.run_id)}">${esc(r.created.slice(0, 16).replace("T", " "))} · ${esc(task(r.task_id)?.title ?? r.task_id)} · ${r.n} items</option>`).join("");
+}
+
+async function loadRun(id) {
+  const d = await (await fetch("/api/runs/" + encodeURIComponent(id))).json();
+  selectTask(d.task_id);
+  run = { task_id: d.task_id, models: d.models, items: d.items, results: {}, total: d.items.length * d.models.length, done: d.results.length };
+  d.models.forEach((m) => (run.results[m.id] = {}));
+  d.results.forEach((r) => (run.results[r.model][r.item_id] = r));
+  openRow = null;
+  render();
+}
+
+// ---------- run
+async function start() {
+  const models = CFG.models.filter((m) => $("#m-" + m.id).checked).map((m) => m.id);
+  if (!models.length) return showErr("Select at least one model.");
+  showErr(null);
+  $("#go").disabled = true;
+  $("#go").textContent = "Running…";
+  openRow = null;
+  try {
+    const resp = await fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task_id: taskId, models, n: +$("#n").value, concurrency: +$("#conc").value, simulate: $("#sim").checked }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (line.trim()) onEvent(JSON.parse(line));
+      }
+    }
+  } catch (e) {
+    showErr("Run failed: " + e.message);
+  } finally {
+    $("#go").disabled = false;
+    $("#go").textContent = "Run comparison";
+    refreshRuns();
+  }
+}
+
+function onEvent(ev) {
+  if (ev.type === "start") {
+    run = { task_id: ev.task_id, models: ev.models, items: ev.items, results: {}, total: ev.items.length * ev.models.length, done: 0 };
+    ev.models.forEach((m) => (run.results[m.id] = {}));
+  } else if (ev.type === "result") {
+    run.results[ev.model][ev.item_id] = ev;
+    run.done++;
+  }
+  if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
+}
+
+function showErr(msg) { $("#err").hidden = !msg; $("#err").textContent = msg || ""; }
+
+// ---------- stats
+function stats(mid) {
+  const t = task(run.task_id);
+  const rs = Object.values(run.results[mid] || {});
+  const ok = rs.filter((r) => r.ok);
+  const lat = ok.map((r) => r.latency_ms);
+  const full = ok.filter((r) => Object.values(r.correct).every(Boolean)).length;
+  const perQ = t.questions.map((q) => ({ id: q.id, acc: ok.length ? ok.filter((r) => r.correct[q.id]).length / ok.length : NaN }));
+  const cost = ok.reduce((a, r) => a + r.cost_usd, 0);
+  const tin = ok.reduce((a, r) => a + r.input_tokens, 0);
+  const tout = ok.reduce((a, r) => a + r.output_tokens, 0);
+  const meanCost = ok.length ? cost / ok.length : NaN;
+  const errors = rs.filter((r) => !r.ok);
+  return {
+    n: ok.length, errors, acc: ok.length ? full / ok.length : NaN, perQ, lat,
+    p50: quant(lat, 0.5), p95: quant(lat, 0.95), meanCost,
+    per1m: meanCost * 1e6, annual: meanCost * t.volume,
+    tin: ok.length ? tin / ok.length : NaN, tout: ok.length ? tout / ok.length : NaN,
+  };
+}
+const minConf = (r) => Math.min(...Object.values(r.answers).map((a) => a.confidence ?? 0));
+function coverage(mid, thr) {
+  const ok = Object.values(run.results[mid] || {}).filter((r) => r.ok);
+  const auto = ok.filter((r) => minConf(r) >= thr);
+  const right = auto.filter((r) => Object.values(r.correct).every(Boolean)).length;
+  return { share: ok.length ? auto.length / ok.length : NaN, acc: auto.length ? right / auto.length : NaN, n: auto.length };
+}
+
+// ---------- render
+function render() {
+  const has = run && run.task_id === taskId;
+  $("#prog").style.width = has ? (100 * run.done / run.total) + "%" : "0";
+  const sims = has ? run.models.filter((m) => m.simulated).map((m) => modelCfg(m.id)?.label ?? m.id) : [];
+  $("#simBanner").hidden = !sims.length;
+  $("#simBanner").textContent = sims.length ? `Simulated responses for ${sims.join(" and ")}: no API key, or simulation was switched on. Latency, accuracy and confidence for these are made up; token counts and prices are estimates.` : "";
+  if (!has) {
+    $("#headline").textContent = "Pick a task and run a comparison.";
+    $("#cards").innerHTML = "";
+    $("#latChart").innerHTML = $("#covChart").innerHTML = `<div class="empty">No results yet</div>`;
+    $("#latLegend").innerHTML = $("#readout").innerHTML = "";
+    $("#ledger").innerHTML = "";
+    return;
+  }
+  const S = Object.fromEntries(run.models.map((m) => [m.id, stats(m.id)]));
+  renderHeadline(S);
+  renderCards(S);
+  renderLatency(S);
+  renderCoverage();
+  renderLedger();
+}
+
+function renderHeadline(S) {
+  const ids = run.models.map((m) => m.id);
+  if (ids.length < 2 || ids.some((i) => !S[i].n)) {
+    $("#headline").textContent = run.done < run.total ? `Running… ${run.done} of ${run.total} calls back.` : "Results";
+    return;
+  }
+  const [a, b] = ids;
+  const A = S[a], B = S[b], la = modelCfg(a).label, lb = modelCfg(b).label;
+  const fast = A.p50 <= B.p50 ? [la, B.p50 / A.p50] : [lb, A.p50 / B.p50];
+  const cheap = A.meanCost <= B.meanCost ? [la, B.meanCost / A.meanCost] : [lb, A.meanCost / B.meanCost];
+  const accDiff = (A.acc - B.acc) * 100;
+  const accTxt = Math.abs(accDiff) < 1 ? "the same all-correct rate" : `${Math.abs(accDiff).toFixed(0)} points ${accDiff > 0 ? "more" : "fewer"} items fully right for ${la}`;
+  const x = (v) => (isFinite(v) ? (v >= 10 ? Math.round(v) : v.toFixed(1)) + "×" : "far");
+  $("#headline").textContent = `${fast[0]} is ${x(fast[1])} faster at the median, ${cheap[0]} is ${x(cheap[1])} cheaper per item, with ${accTxt}.`;
+}
+
+function renderCards(S) {
+  const t = task(run.task_id);
+  $("#cards").innerHTML = run.models.map((m) => {
+    const s = S[m.id], c = modelCfg(m.id), i = modelIdx(m.id);
+    const errs = s.errors.length ? `<div class="err">${s.errors.length} failed call(s). First: ${esc(s.errors[0].error)}</div>` : "";
+    return `<article class="card" style="--c:${col(i)}">
+      <div class="card-head"><h3>${esc(c.label)}</h3>
+        <span class="row" style="gap:6px"><span class="muted" style="font-size:13px">${esc(c.kind)}</span>
+        <span class="badge ${m.simulated ? "sim" : "live"}">${m.simulated ? "simulated" : "live API"}</span></span></div>
+      <div class="metrics">
+        <div class="metric"><span class="k">All answers right</span><span class="v">${pct(s.acc)}</span><span class="s">${s.n} items</span></div>
+        <div class="metric"><span class="k">Median latency</span><span class="v">${ms(s.p50)}</span><span class="s">p95 ${ms(s.p95)}</span></div>
+        <div class="metric"><span class="k">Cost per item</span><span class="v">${usd(s.meanCost)}</span><span class="s">${isNaN(s.tin) ? "–" : Math.round(s.tin)} in · ${isNaN(s.tout) ? "–" : Math.round(s.tout)} out tok</span></div>
+        <div class="metric"><span class="k">Per million items</span><span class="v">${usd(s.per1m)}</span><span class="s">$${c.price_in}/$${c.price_out} per M tok</span></div>
+        <div class="metric"><span class="k">A year at volume</span><span class="v">${usd(s.annual)}</span><span class="s">${t.volume.toLocaleString("en-GB")} items</span></div>
+        <div class="metric"><span class="k">Serial time / 1k</span><span class="v">${isNaN(s.p50) ? "–" : (s.lat.reduce((a, b) => a + b, 0) / s.lat.length * 1000 / 60000).toFixed(1) + " min"}</span><span class="s">one call at a time</span></div>
+      </div>
+      <div class="perq">${s.perQ.map((q) => `<div><span class="mono" style="font-size:12px">${esc(q.id)}</span><span class="mono">${pct(q.acc)}</span><span class="bar"><i style="width:${isNaN(q.acc) ? 0 : q.acc * 100}%"></i></span></div>`).join("")}</div>
+      ${errs}
+    </article>`;
+  }).join("");
+}
+
+function renderLatency(S) {
+  $("#latLegend").innerHTML = run.models.map((m) => `<span><i class="swatch" style="background:${col(modelIdx(m.id))}"></i>${esc(modelCfg(m.id).label)}</span>`).join("");
+  const all = run.models.flatMap((m) => S[m.id].lat);
+  if (!all.length) { $("#latChart").innerHTML = `<div class="empty">Waiting for the first results</div>`; return; }
+  const W = 520, rowH = 54, padL = 12, padR = 16, top = 8, H = top + rowH * run.models.length + 26;
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const ticks = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+  lo = Math.max(10, ticks.filter((t) => t <= lo).pop() ?? 10);
+  hi = ticks.find((t) => t >= hi) ?? hi;
+  const x = (v) => padL + (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo) || 1) * (W - padL - padR);
+  const label = (t) => (t >= 1000 ? t / 1000 + "s" : t + "ms");
+  let g = ticks.filter((t) => t >= lo && t <= hi).map((t) => `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${H - 22}"/><text x="${x(t)}" y="${H - 6}" text-anchor="middle">${label(t)}</text>`).join("");
+  run.models.forEach((m, k) => {
+    const cy = top + rowH * k + rowH / 2, c = col(modelIdx(m.id));
+    const rs = Object.values(run.results[m.id]).filter((r) => r.ok);
+    rs.forEach((r, j) => {
+      const jit = ((j * 37) % 17 - 8) * 1.6;
+      g += `<circle cx="${x(Math.max(lo, r.latency_ms))}" cy="${cy + jit}" r="4.5" fill="${c}" fill-opacity="0.75" stroke="var(--surface)" stroke-width="1.5"><title>${esc(r.item_id)}: ${ms(r.latency_ms)}</title></circle>`;
+    });
+    const p = S[m.id].p50;
+    if (!isNaN(p)) g += `<line x1="${x(p)}" x2="${x(p)}" y1="${cy - 20}" y2="${cy + 20}" stroke="var(--ink)" stroke-width="2"/><text x="${Math.min(W - 40, x(p) + 6)}" y="${cy - 14}" style="fill:var(--ink)">${ms(p)}</text>`;
+  });
+  $("#latChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Latency per call by model">${g}</svg>`;
+}
+
+function renderCoverage() {
+  const thr = +$("#thr").value;
+  $("#readout").innerHTML = run.models.map((m) => {
+    const c = coverage(m.id, thr);
+    return `<div><i class="swatch" style="background:${col(modelIdx(m.id))}"></i><b>${esc(modelCfg(m.id).label)}</b>
+      <span>${pct(c.share)} routed automatically</span><span class="muted">·</span><span>${isNaN(c.acc) ? "nothing routed" : pct(c.acc) + " of those fully right"}</span></div>`;
+  }).join("");
+  const W = 520, H = 250, L = 40, R = 14, T = 10, B = 30;
+  const x = (v) => L + v * (W - L - R);
+  const series = run.models.map((m) => {
+    const pts = [];
+    for (let t = 0.5; t <= 0.995; t += 0.01) { const c = coverage(m.id, t); if (c.n) pts.push({ t, ...c }); }
+    return { m, pts };
+  });
+  const accs = series.flatMap((s) => s.pts.map((p) => p.acc));
+  if (!accs.length) { $("#covChart").innerHTML = `<div class="empty">Waiting for the first results</div>`; return; }
+  const yLo = Math.max(0, Math.floor(Math.min(...accs) * 10) / 10 - 0.05);
+  const y = (v) => T + (1 - (v - yLo) / (1 - yLo)) * (H - T - B);
+  let g = "";
+  for (let v = 0; v <= 1.001; v += 0.25) g += `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - B}"/><text x="${x(v)}" y="${H - 12}" text-anchor="middle">${v * 100}%</text>`;
+  const step = (1 - yLo) > 0.3 ? 0.1 : 0.05;
+  for (let v = Math.ceil(yLo / step) * step; v <= 1.0001; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  g += `<text x="${W - R}" y="${H - B - 6}" text-anchor="end">share routed automatically →</text>`;
+  series.forEach(({ m, pts }) => {
+    const c = col(modelIdx(m.id));
+    const d = [...pts].sort((a, b) => a.share - b.share).map((p, i) => `${i ? "L" : "M"}${x(p.share).toFixed(1)},${y(p.acc).toFixed(1)}`).join("");
+    g += `<path d="${d}" fill="none" stroke="${c}" stroke-width="2"/>`;
+    pts.filter((_, i) => i % 5 === 0).forEach((p) => g += `<circle cx="${x(p.share)}" cy="${y(p.acc)}" r="7" fill="transparent"><title>threshold ${p.t.toFixed(2)}: ${pct(p.share)} automated, ${pct(p.acc)} right</title></circle>`);
+    const cur = coverage(m.id, thr);
+    if (cur.n) g += `<circle cx="${x(cur.share)}" cy="${y(cur.acc)}" r="6" fill="${c}" stroke="var(--surface)" stroke-width="2"><title>threshold ${thr.toFixed(2)}: ${pct(cur.share)} automated, ${pct(cur.acc)} right</title></circle>`;
+  });
+  $("#covChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Share automated against accuracy of automated items">${g}</svg>`;
+}
+
+function renderLedger() {
+  const t = task(run.task_id);
+  const head = `<tr><th>Item</th><th>Input</th>${run.models.map((m) => `<th><i class="swatch" style="display:inline-block;background:${col(modelIdx(m.id))}"></i> ${esc(modelCfg(m.id).label)}</th>`).join("")}</tr>`;
+  const rows = run.items.map((it) => {
+    const cells = run.models.map((m) => {
+      const r = run.results[m.id][it.id];
+      if (!r) return `<td><span class="pill pending">…</span></td>`;
+      if (!r.ok) return `<td><span class="pill no">error</span></td>`;
+      const right = Object.values(r.correct).filter(Boolean).length, n = t.questions.length;
+      return `<td><span class="score"><span class="pill ${right === n ? "ok" : "no"}">${right}/${n}</span><span class="muted">${ms(r.latency_ms)}</span><span class="muted">min conf ${minConf(r).toFixed(2)}</span></span></td>`;
+    }).join("");
+    const main = `<tr class="item" data-id="${esc(it.id)}" tabindex="0"><td class="mono">${esc(it.id)}</td><td class="prev">${esc(it.preview)}</td>${cells}</tr>`;
+    return main + (openRow === it.id ? `<tr class="detail"><td colspan="${2 + run.models.length}">${audit(it)}</td></tr>` : "");
+  }).join("");
+  $("#ledger").innerHTML = head + rows;
+  document.querySelectorAll("#ledger tr.item").forEach((tr) => {
+    const toggle = () => { openRow = openRow === tr.dataset.id ? null : tr.dataset.id; renderLedger(); };
+    tr.onclick = toggle;
+    tr.onkeydown = (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle());
+  });
+}
+
+function audit(it) {
+  const t = task(run.task_id), thr = +$("#thr").value;
+  const qboxes = t.questions.map((q) => {
+    const per = run.models.map((m) => {
+      const r = run.results[m.id][it.id];
+      if (!r || !r.ok) return "";
+      const a = r.answers[q.id] || {};
+      const right = r.correct[q.id];
+      const dist = a.probs ? `<div class="dist">${Object.entries(a.probs).map(([k, p]) => `<div><span>${esc(k)}</span><span class="bar"><i style="width:${p * 100}%;background:${col(modelIdx(m.id))}"></i></span><span>${p.toFixed(2)}</span></div>`).join("")}</div>`
+        : `<div class="muted" style="font-size:11px">Self-reported confidence; no distribution</div>`;
+      return `<div class="ans"><div class="line"><span><i class="swatch" style="display:inline-block;background:${col(modelIdx(m.id))}"></i> <span class="mono">${esc(a.answer)}</span></span>
+        <span><span class="pill ${right ? "ok" : "no"}">${right ? "right" : "wrong"}</span> <span class="mono muted">${(a.confidence ?? 0).toFixed(2)}${(a.confidence ?? 0) >= thr ? "" : " · to person"}</span></span></div>${dist}</div>`;
+    }).join("");
+    return `<div class="qbox"><div><b class="mono" style="font-size:12px">${esc(q.id)}</b> <span class="truth">known answer: <span class="mono">${esc(it.labels[q.id])}</span></span></div>${per}</div>`;
+  }).join("");
+  const raws = run.models.map((m) => {
+    const r = run.results[m.id][it.id];
+    if (!r) return "";
+    const meta = { model: m.id, simulated: r.simulated, latency_ms: Math.round(r.latency_ms), input_tokens: r.input_tokens, output_tokens: r.output_tokens, cost_usd: r.cost_usd, threshold: thr, decided_by: Object.values(r.answers).every((a) => (a.confidence ?? 0) >= thr) ? "automatic" : "person", error: r.error };
+    return `<details><summary>${esc(modelCfg(m.id).label)}: audit record and raw response</summary><pre>${esc(JSON.stringify({ audit: meta, raw: r.raw }, null, 2))}</pre></details>`;
+  }).join("");
+  return `<div class="audit"><div><h2 style="margin-bottom:6px">Input</h2><pre>${esc(typeof it.state === "string" ? it.state : JSON.stringify(it.state, null, 2))}</pre></div>
+    <div class="qgrid">${qboxes}</div>${raws}</div>`;
+}
+
+init().catch((e) => showErr("Could not load config: " + e.message));
+</script>
+</body>
+</html>

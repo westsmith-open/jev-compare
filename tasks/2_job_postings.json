@@ -1,0 +1,101 @@
+{
+  "id": "job_postings",
+  "title": "Job posting tagging",
+  "annual_volume": 500000,
+  "description": "Tag job postings for a job board's search filters: where the work happens, seniority, job function and whether visa sponsorship is offered. All postings and employers are fictional.",
+  "questions": [
+    {
+      "id": "work_location",
+      "type": "choice",
+      "instructions": "Where does the job expect the person to work?",
+      "criteria": {
+        "remote": "No regular office attendance. Occasional meetups or quarterly visits still count as remote.",
+        "hybrid": "A regular pattern of some office days and some home days.",
+        "onsite": "At the employer's site every working day."
+      }
+    },
+    {
+      "id": "seniority",
+      "type": "score",
+      "instructions": "What level is this role?",
+      "levels": [
+        {"key": "entry", "text": "Entry: interns, apprentices, graduates, or up to about 2 years' experience."},
+        {"key": "mid", "text": "Mid: about 2 to 5 years' experience, working independently."},
+        {"key": "senior", "text": "Senior: about 5 or more years, an expert individual contributor without direct reports."},
+        {"key": "lead", "text": "Lead: manages people or runs a team, including supervisors, managers, heads and directors."}
+      ]
+    },
+    {
+      "id": "function",
+      "type": "choice",
+      "instructions": "Which job function is this?",
+      "criteria": {
+        "engineering": "Software, infrastructure and DevOps engineering.",
+        "data": "Data science, analytics, data engineering and machine learning.",
+        "design": "Product, UX, research and brand design.",
+        "sales": "Selling, account management and sales development.",
+        "operations": "Office, warehouse, logistics and facilities operations.",
+        "people": "HR, recruiting and people teams."
+      }
+    },
+    {
+      "id": "visa_sponsorship",
+      "type": "noul",
+      "instructions": "The posting explicitly offers visa sponsorship.",
+      "criteria": {
+        "true": "States that the employer can or will sponsor a visa for this role.",
+        "false": "Says nothing about sponsorship, rules it out, or requires an existing right to work."
+      }
+    }
+  ],
+  "items": [
+    {"id": "job-01", "state": {"title": "Junior Frontend Developer", "text": "Join our product team in our Leeds office, five days a week. Graduates and bootcamp leavers welcome. You'll build React components alongside senior engineers."},
+     "labels": {"work_location": "onsite", "seniority": "entry", "function": "engineering", "visa_sponsorship": false}},
+    {"id": "job-02", "state": {"title": "Senior Data Engineer", "text": "Fully remote within the UK. 6+ years building data pipelines with Spark and dbt. Visa sponsorship is available for this role."},
+     "labels": {"work_location": "remote", "seniority": "senior", "function": "data", "visa_sponsorship": true}},
+    {"id": "job-03", "state": {"title": "Product Designer", "text": "Hybrid: two days a week in our Bristol studio. You'll have 3+ years designing B2B software and a portfolio showing end-to-end work."},
+     "labels": {"work_location": "hybrid", "seniority": "mid", "function": "design", "visa_sponsorship": false}},
+    {"id": "job-04", "state": {"title": "Head of Sales, EMEA", "text": "Lead a team of 12 account executives across Europe. Remote anywhere in Europe. We are unable to sponsor visas."},
+     "labels": {"work_location": "remote", "seniority": "lead", "function": "sales", "visa_sponsorship": false}},
+    {"id": "job-05", "state": {"title": "Warehouse Shift Supervisor", "text": "Supervise a night shift of 20 pickers at our Daventry distribution centre. 2 years' warehouse experience needed. Full-time on site."},
+     "labels": {"work_location": "onsite", "seniority": "lead", "function": "operations", "visa_sponsorship": false}},
+    {"id": "job-06", "state": {"title": "People Partner", "text": "Hybrid, three days a week in our London office. You'll bring around 4 years of generalist HR experience and partner with two business units."},
+     "labels": {"work_location": "hybrid", "seniority": "mid", "function": "people", "visa_sponsorship": false}},
+    {"id": "job-07", "state": {"title": "Machine Learning Engineer", "text": "Our London team mostly comes in on Tuesdays and Thursdays. You'll have 5+ years shipping ML models to production. We sponsor Skilled Worker visas."},
+     "labels": {"work_location": "hybrid", "seniority": "senior", "function": "data", "visa_sponsorship": true}},
+    {"id": "job-08", "state": {"title": "Graduate Sales Development Representative", "text": "No experience required: full training provided. Based in our Manchester office every day with the rest of the sales floor."},
+     "labels": {"work_location": "onsite", "seniority": "entry", "function": "sales", "visa_sponsorship": false}},
+    {"id": "job-09", "state": {"title": "Staff Software Engineer", "text": "Remote across the UK and Ireland. 10+ years' experience. You'll set technical direction for the platform; this is an individual contributor role with no direct reports."},
+     "labels": {"work_location": "remote", "seniority": "senior", "function": "engineering", "visa_sponsorship": false}},
+    {"id": "job-10", "state": {"title": "Engineering Manager, Payments", "text": "Manage a team of 8 engineers building our payments platform. Hybrid with two office days in Edinburgh. Visa sponsorship is available."},
+     "labels": {"work_location": "hybrid", "seniority": "lead", "function": "engineering", "visa_sponsorship": true}},
+    {"id": "job-11", "state": {"title": "UX Research Intern (Summer)", "text": "A 12-week paid summer internship, fully remote. You'll run usability sessions with our research lead."},
+     "labels": {"work_location": "remote", "seniority": "entry", "function": "design", "visa_sponsorship": false}},
+    {"id": "job-12", "state": {"title": "Office Manager", "text": "Keep our Brighton office running: facilities, suppliers and events. 3 years' office management experience. On site Monday to Friday."},
+     "labels": {"work_location": "onsite", "seniority": "mid", "function": "operations", "visa_sponsorship": false}},
+    {"id": "job-13", "state": {"title": "Analytics Lead", "text": "Lead a team of four analysts supporting marketing and product. Hybrid, two days a week in Birmingham."},
+     "labels": {"work_location": "hybrid", "seniority": "lead", "function": "data", "visa_sponsorship": false}},
+    {"id": "job-14", "state": {"title": "Technical Recruiter", "text": "Remote, UK-based. 3+ years recruiting engineers. Candidates must already have the right to work in the UK."},
+     "labels": {"work_location": "remote", "seniority": "mid", "function": "people", "visa_sponsorship": false}},
+    {"id": "job-15", "state": {"title": "Senior Account Executive", "text": "Close six-figure deals with enterprise customers. 6+ years in SaaS sales. Hybrid from our London office. We offer visa sponsorship for this role."},
+     "labels": {"work_location": "hybrid", "seniority": "senior", "function": "sales", "visa_sponsorship": true}},
+    {"id": "job-16", "state": {"title": "DevOps Engineer", "text": "Remote-first: you'll join the team in our Cardiff office for one week each quarter. 3 years with Kubernetes and Terraform."},
+     "labels": {"work_location": "remote", "seniority": "mid", "function": "engineering", "visa_sponsorship": false}},
+    {"id": "job-17", "state": {"title": "Senior Brand Designer", "text": "Work in our Shoreditch studio full-time alongside the creative team. 7+ years of brand identity work for consumer brands."},
+     "labels": {"work_location": "onsite", "seniority": "senior", "function": "design", "visa_sponsorship": false}},
+    {"id": "job-18", "state": {"title": "Data Analyst Apprentice", "text": "A Level 4 apprenticeship combining study with work. Three days in our Nottingham office, two at home."},
+     "labels": {"work_location": "hybrid", "seniority": "entry", "function": "data", "visa_sponsorship": false}},
+    {"id": "job-19", "state": {"title": "Logistics Coordinator", "text": "Book carriers and track shipments from our Felixstowe depot, on site every day. One year of logistics experience is helpful but not essential."},
+     "labels": {"work_location": "onsite", "seniority": "entry", "function": "operations", "visa_sponsorship": false}},
+    {"id": "job-20", "state": {"title": "Director of People", "text": "Lead HR, recruiting and L&D across 400 staff. Fully remote, with travel to quarterly leadership offsites."},
+     "labels": {"work_location": "remote", "seniority": "lead", "function": "people", "visa_sponsorship": false}},
+    {"id": "job-21", "state": {"title": "Backend Engineer (Go)", "text": "3 to 5 years building APIs in Go. Hybrid with Wednesdays in our Glasgow office. We can sponsor visas for the right candidate."},
+     "labels": {"work_location": "hybrid", "seniority": "mid", "function": "engineering", "visa_sponsorship": true}},
+    {"id": "job-22", "state": {"title": "Inside Sales Manager", "text": "Manage and coach a team of six inside sales reps from our Reading office, five days a week."},
+     "labels": {"work_location": "onsite", "seniority": "lead", "function": "sales", "visa_sponsorship": false}},
+    {"id": "job-23", "state": {"title": "Senior Data Scientist", "text": "Fully remote. 6+ years in applied statistics and experimentation. Unfortunately we cannot offer sponsorship; you must already be eligible to work in the UK."},
+     "labels": {"work_location": "remote", "seniority": "senior", "function": "data", "visa_sponsorship": false}},
+    {"id": "job-24", "state": {"title": "Design Systems Lead", "text": "Lead a team of three designers and engineers who own our design system. Hybrid, two days a week in Manchester. Visa sponsorship available."},
+     "labels": {"work_location": "hybrid", "seniority": "lead", "function": "design", "visa_sponsorship": true}}
+  ]
+}

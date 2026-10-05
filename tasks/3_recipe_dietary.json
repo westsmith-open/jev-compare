@@ -1,0 +1,97 @@
+{
+  "id": "recipe_dietary",
+  "title": "Recipe dietary tagging",
+  "annual_volume": 200000,
+  "description": "Tag recipes on a cooking site from their ingredient lists: the most inclusive diet they suit, whether they contain gluten or nuts, and how spicy they are. The house rules in each question settle the usual grey areas. All recipes are illustrative.",
+  "questions": [
+    {
+      "id": "diet",
+      "type": "choice",
+      "instructions": "Which is the most restrictive diet this recipe suits as written? Treat all cheese as vegetarian. Honey, eggs, butter and milk are vegetarian but not vegan. Anchovies, fish sauce, shrimp paste and Worcestershire sauce count as fish. Gelatin counts as meat.",
+      "criteria": {
+        "vegan": "No animal products at all.",
+        "vegetarian": "No meat or fish, but may include dairy, eggs or honey.",
+        "pescatarian": "Contains fish or seafood but no other meat.",
+        "omnivore": "Contains meat or poultry, or gelatin."
+      }
+    },
+    {
+      "id": "contains_gluten",
+      "type": "noul",
+      "instructions": "The recipe contains gluten. Wheat, barley, rye, ordinary soy sauce and oats contain gluten unless the ingredient says gluten-free. Tamari, rice and corn do not.",
+      "criteria": {
+        "true": "At least one ingredient contains gluten under these rules.",
+        "false": "No ingredient contains gluten under these rules."
+      }
+    },
+    {
+      "id": "contains_nuts",
+      "type": "noul",
+      "instructions": "The recipe contains nuts. Peanuts, tree nuts, pine nuts and nut milks count as nuts. Coconut and sesame (including tahini) do not.",
+      "criteria": {
+        "true": "At least one ingredient is or contains nuts under these rules.",
+        "false": "No ingredient is or contains nuts under these rules."
+      }
+    },
+    {
+      "id": "spice",
+      "type": "score",
+      "instructions": "How spicy is the recipe?",
+      "levels": [
+        {"key": "mild", "text": "Mild: no chilli or hot ingredients."},
+        {"key": "medium", "text": "Medium: some heat, such as one or two mild chillies, chilli flakes or a spoon of hot sauce."},
+        {"key": "hot", "text": "Hot: several hot chillies, Scotch bonnets, bird's eye chillies or a lot of cayenne."}
+      ]
+    }
+  ],
+  "items": [
+    {"id": "rec-01", "state": {"name": "Margherita pizza", "ingredients": ["strong white bread flour", "yeast", "tinned tomatoes", "mozzarella", "fresh basil", "olive oil"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": true, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-02", "state": {"name": "Prawn pad thai", "ingredients": ["flat rice noodles", "king prawns", "fish sauce", "tamarind paste", "eggs", "beansprouts", "roasted peanuts", "lime", "1 red chilli"]},
+     "labels": {"diet": "pescatarian", "contains_gluten": false, "contains_nuts": true, "spice": "medium"}},
+    {"id": "rec-03", "state": {"name": "Chana masala", "ingredients": ["chickpeas", "onion", "tinned tomatoes", "garam masala", "2 green chillies", "ginger", "garlic", "vegetable oil", "coriander"]},
+     "labels": {"diet": "vegan", "contains_gluten": false, "contains_nuts": false, "spice": "medium"}},
+    {"id": "rec-04", "state": {"name": "Beef chilli", "ingredients": ["beef mince", "kidney beans", "3 dried ancho chillies", "2 jalapeños", "2 tsp cayenne pepper", "tinned tomatoes", "onion"]},
+     "labels": {"diet": "omnivore", "contains_gluten": false, "contains_nuts": false, "spice": "hot"}},
+    {"id": "rec-05", "state": {"name": "Pesto spaghetti", "ingredients": ["spaghetti", "basil", "pine nuts", "parmesan", "garlic", "olive oil"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": true, "contains_nuts": true, "spice": "mild"}},
+    {"id": "rec-06", "state": {"name": "Berry overnight oats", "ingredients": ["rolled oats", "almond milk", "maple syrup", "mixed berries"]},
+     "labels": {"diet": "vegan", "contains_gluten": true, "contains_nuts": true, "spice": "mild"}},
+    {"id": "rec-07", "state": {"name": "Caesar salad", "ingredients": ["romaine lettuce", "sourdough croutons", "parmesan", "anchovy fillets", "egg yolk", "lemon", "olive oil"]},
+     "labels": {"diet": "pescatarian", "contains_gluten": true, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-08", "state": {"name": "Honey-glazed carrots", "ingredients": ["carrots", "honey", "butter", "thyme"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": false, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-09", "state": {"name": "Tofu green curry", "ingredients": ["firm tofu", "green curry paste (contains shrimp paste)", "coconut milk", "aubergine", "4 bird's eye chillies", "Thai basil"]},
+     "labels": {"diet": "pescatarian", "contains_gluten": false, "contains_nuts": false, "spice": "hot"}},
+    {"id": "rec-10", "state": {"name": "Vegan green curry", "ingredients": ["firm tofu", "vegan green curry paste", "coconut milk", "green beans", "1 green chilli", "jasmine rice"]},
+     "labels": {"diet": "vegan", "contains_gluten": false, "contains_nuts": false, "spice": "medium"}},
+    {"id": "rec-11", "state": {"name": "Fish tacos", "ingredients": ["cod fillets", "corn tortillas", "red cabbage", "lime", "mayonnaise", "1 chipotle chilli in adobo"]},
+     "labels": {"diet": "pescatarian", "contains_gluten": false, "contains_nuts": false, "spice": "medium"}},
+    {"id": "rec-12", "state": {"name": "Fruit gummies", "ingredients": ["apple juice", "sugar", "gelatin", "citric acid"]},
+     "labels": {"diet": "omnivore", "contains_gluten": false, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-13", "state": {"name": "Garlic pak choi with soy", "ingredients": ["pak choi", "garlic", "soy sauce", "sesame oil"]},
+     "labels": {"diet": "vegan", "contains_gluten": true, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-14", "state": {"name": "Garlic pak choi with tamari", "ingredients": ["pak choi", "garlic", "tamari", "sesame oil"]},
+     "labels": {"diet": "vegan", "contains_gluten": false, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-15", "state": {"name": "Jerk chicken", "ingredients": ["chicken thighs", "2 Scotch bonnet chillies", "allspice", "thyme", "spring onions", "soy sauce", "lime"]},
+     "labels": {"diet": "omnivore", "contains_gluten": true, "contains_nuts": false, "spice": "hot"}},
+    {"id": "rec-16", "state": {"name": "Flourless peanut butter cookies", "ingredients": ["peanut butter", "caster sugar", "egg", "vanilla"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": false, "contains_nuts": true, "spice": "mild"}},
+    {"id": "rec-17", "state": {"name": "Shakshuka", "ingredients": ["eggs", "tinned tomatoes", "red peppers", "1 tsp chilli flakes", "cumin", "feta"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": false, "contains_nuts": false, "spice": "medium"}},
+    {"id": "rec-18", "state": {"name": "Spaghetti bolognese", "ingredients": ["beef mince", "pancetta", "onion", "carrot", "tinned tomatoes", "red wine", "spaghetti"]},
+     "labels": {"diet": "omnivore", "contains_gluten": true, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-19", "state": {"name": "Coconut rice pudding", "ingredients": ["pudding rice", "coconut milk", "sugar", "vanilla pod"]},
+     "labels": {"diet": "vegan", "contains_gluten": false, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-20", "state": {"name": "Walnut banana bread", "ingredients": ["plain flour", "ripe bananas", "eggs", "butter", "walnuts", "baking powder"]},
+     "labels": {"diet": "vegetarian", "contains_gluten": true, "contains_nuts": true, "spice": "mild"}},
+    {"id": "rec-21", "state": {"name": "Welsh rarebit", "ingredients": ["bread", "mature cheddar", "Worcestershire sauce", "English mustard", "ale"]},
+     "labels": {"diet": "pescatarian", "contains_gluten": true, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-22", "state": {"name": "Falafel wrap", "ingredients": ["chickpeas", "parsley", "cumin", "wheat flatbread", "tahini", "1 tbsp chilli sauce"]},
+     "labels": {"diet": "vegan", "contains_gluten": true, "contains_nuts": false, "spice": "medium"}},
+    {"id": "rec-23", "state": {"name": "Gluten-free porridge", "ingredients": ["gluten-free oats", "gluten-free oat milk", "cinnamon", "banana"]},
+     "labels": {"diet": "vegan", "contains_gluten": false, "contains_nuts": false, "spice": "mild"}},
+    {"id": "rec-24", "state": {"name": "Chicken satay skewers", "ingredients": ["chicken breast", "peanut butter", "soy sauce", "coconut milk", "1 red chilli", "lime"]},
+     "labels": {"diet": "omnivore", "contains_gluten": true, "contains_nuts": true, "spice": "medium"}}
+  ]
+}

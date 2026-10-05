@@ -1,0 +1,22 @@
+{
+  "_note": "Prices are USD per million tokens (fallback only: OpenRouter returns the billed cost per call). Jev bills input only. Gemini 3.8 Flash price is the introductory rate to 31 Dec 2026 ($1.50 / $7.50 from 1 Jan 2027). Gemini runs with structured output and minimal reasoning: one fast pass with answers constrained to the allowed values, the closest an LLM call gets to a Jev call.",
+  "models": [
+    {
+      "id": "jev",
+      "label": "Jev 1.13",
+      "provider": "jev",
+      "kind": "decision model",
+      "price_in": 0.042,
+      "price_out": 0.0
+    },
+    {
+      "id": "gemini-flash",
+      "label": "Gemini 3.8 Flash",
+      "provider": "gemini",
+      "kind": "general LLM, structured output, minimal reasoning",
+      "reasoning_effort": "minimal",
+      "price_in": 0.75,
+      "price_out": 3.75
+    }
+  ]
+}
